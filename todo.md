@@ -5,7 +5,7 @@
 - [x] Create todo.md
 - [x] Define DB schema (assets, collections, tabs)
 - [x] Apply DB migration
-- [ ] Setup GitHub remote and push initial commit
+- [x] Setup GitHub remote and push initial commit
 
 ## Milestone 1: Auth Shell & Design System
 - [x] Global brutalist typography design system (index.css)
