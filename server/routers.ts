@@ -224,6 +224,37 @@ export const appRouter = router({
   collections: collectionRouter,
   canvasTabs: canvasTabRouter,
 
+  // ── Feedback (public, no auth) ──────────────────────────────────────────────
+  feedback: router({
+    submit: publicProcedure
+      .input(
+        z.object({
+          message: z.string().min(1).max(5000),
+          email: z.string().email().optional(),
+          name: z.string().max(100).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const content = [
+          input.name ? `Name: ${input.name}` : null,
+          input.email ? `Email: ${input.email}` : null,
+          ``,
+          input.message,
+        ].filter(Boolean).join("\n");
+        try {
+          const { notifyOwner } = await import("./_core/notification");
+          await notifyOwner({
+            title: `[Feedback] ${input.email ?? "Anonymous"} — Moovas`,
+            content,
+          });
+        } catch (e) {
+          // Notification failure is non-fatal
+          console.warn("[Feedback] Notification failed:", e);
+        }
+        return { success: true };
+      }),
+  }),
+
   scrape: router({
     url: protectedProcedure
       .input(z.object({ url: z.string().url() }))

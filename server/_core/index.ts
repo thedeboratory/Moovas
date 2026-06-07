@@ -7,6 +7,8 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import path from "path";
+import { notifyOwner } from "./notification";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -34,6 +36,45 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+
+  // ── /api/collab — Let's Collaborate form (no auth required) ──────────────
+  app.post("/api/collab", async (req, res) => {
+    try {
+      const { email, phone, subject, message, timeframe } = req.body as {
+        email: string;
+        phone?: string;
+        subject: string;
+        message: string;
+        timeframe: string;
+      };
+      if (!email || !subject || !message || !timeframe) {
+        res.status(400).json({ error: "Missing required fields" });
+        return;
+      }
+      const content = [
+        `From: ${email}`,
+        phone ? `Phone: ${phone}` : null,
+        `Subject: ${subject}`,
+        `Timeframe: ${timeframe}`,
+        ``,
+        message,
+      ].filter(Boolean).join("\n");
+      await notifyOwner({
+        title: `[URGENT] Collab Inquiry — ${subject}`,
+        content,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[Collab] Error:", err);
+      res.status(500).json({ error: "Failed to send" });
+    }
+  });
+
+  // ── /deck — Serve the moovas-deck static site ─────────────────────────────
+  const deckDir = path.join(process.cwd(), "moovas-deck");
+  app.use("/deck", express.static(deckDir));
+  app.get("/deck", (_req, res) => res.sendFile(path.join(deckDir, "index.html")));
+
   // tRPC API
   app.use(
     "/api/trpc",

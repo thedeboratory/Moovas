@@ -13,6 +13,7 @@ import ColorsPage from "./pages/ColorsPage";
 import CodePage from "./pages/CodePage";
 import MediaPage from "./pages/MediaPage";
 import BookmarksPage from "./pages/BookmarksPage";
+import DemoPage from "./pages/DemoPage";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/code" component={CodePage} />
       <Route path="/media" component={MediaPage} />
       <Route path="/bookmarks" component={BookmarksPage} />
+      <Route path="/demo" component={DemoPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

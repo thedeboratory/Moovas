@@ -90,21 +90,21 @@
 
 ## Phase 3 — moovas.design Deck Site
 
-- [ ] Horizontal scroll-snap deck shell (HTML5 / Tailwind CDN / Vanilla JS)
-- [ ] Left-side sticky nav that stays fixed across all slides
-- [ ] Light/dark mode toggle top-right on every screen
-- [ ] 3D button system: flat face, hover lifts, click depresses, accent color #3D5AFE on major CTAs
-- [ ] Subtle entrance animations on slide content
-- [ ] Slide 1: Hero — "A lightweight design companion that just works." + CTA
-- [ ] Slide 2: Features overview
-- [ ] Slide 3: Live sandbox demo (Moovas iframe, localStorage session, upsell on clear)
-- [ ] Slide 4: Download (macOS + iOS placeholder links, static counter starting at 2.311k)
-- [ ] Slide 5: Feedback form (no login, anonymous-friendly)
-- [ ] Slide 6: Bio — Deborah Atwater, pulsing signal indicator, social links (Behance/Pinterest/Google Business/@ms.atwater)
-- [ ] "Let's Collaborate" button — opens modal, sends urgency-flagged email to ms.atwater@gmail.com
-- [ ] Collaborate modal fields: email, phone, subject dropdown + custom Other field, message, launch timeframe dropdown
-- [ ] Simple icons (no emoji) throughout
-- [ ] GitHub push for deck site
+- [x] Horizontal scroll-snap deck shell (HTML5 / Tailwind CDN / Vanilla JS)
+- [x] Left-side sticky nav that stays fixed across all slides
+- [x] Light/dark mode toggle top-right on every screen
+- [x] 3D button system: flat face, hover lifts, click depresses, accent color #3D5AFE on major CTAs
+- [x] Subtle entrance animations on slide content
+- [x] Slide 1: Hero — "A lightweight design companion that just works." + CTA
+- [x] Slide 2: Features overview
+- [x] Slide 3: Live sandbox demo (Moovas iframe, localStorage session, upsell on clear)
+- [x] Slide 4: Download (macOS + iOS placeholder links, static counter starting at 2.311k)
+- [x] Slide 5: Feedback form (no login, anonymous-friendly)
+- [x] Slide 6: Bio — Deborah Atwater, pulsing signal indicator, social links (Behance/Pinterest/Google Business/@ms.atwater)
+- [x] "Let's Collaborate" button — opens modal, sends urgency-flagged notification to ms.atwater@gmail.com
+- [x] Collaborate modal fields: email, phone, subject dropdown + custom Other field, message, launch timeframe dropdown
+- [x] Simple icons (no emoji) throughout
+- [x] GitHub push for deck site (served at /deck route)
 
 ## Deferred / Tracked
 

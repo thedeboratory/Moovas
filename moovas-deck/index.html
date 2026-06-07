@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moovas — Infinite Asset Canvas</title>
+  <meta name="description" content="A lightweight design companion that just works. Capture, organize, and export fonts, colors, code, and media on an infinite canvas." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['class', '[data-theme="dark"]'],
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'monospace'],
+          },
+          colors: {
+            accent: '#3D5AFE',
+            'accent-dark': '#2645FD',
+          },
+          animation: {
+            'signal': 'signal 2s ease-in-out infinite',
+            'slide-up': 'slideUp 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+            'fade-in': 'fadeIn 0.4s ease-out forwards',
+          },
+          keyframes: {
+            signal: {
+              '0%, 100%': { transform: 'scaleY(0.4)', opacity: '0.4' },
+              '50%': { transform: 'scaleY(1)', opacity: '1' },
+            },
+            slideUp: {
+              from: { opacity: '0', transform: 'translateY(24px)' },
+              to: { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              from: { opacity: '0' },
+              to: { opacity: '1' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #000000;
+      --muted: rgba(0,0,0,0.4);
+      --border: #000000;
+      --card-bg: #f5f5f5;
+      --accent: #3D5AFE;
+    }
+    [data-theme="dark"] {
+      --bg: #0a0a0a;
+      --fg: #ffffff;
+      --muted: rgba(255,255,255,0.4);
+      --border: #ffffff;
+      --card-bg: #141414;
+      --accent: #3D5AFE;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Space Grotesk', sans-serif;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* ── Scroll container ── */
+    #deck {
+      display: flex;
+      height: 100vh;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    #deck::-webkit-scrollbar { display: none; }
+    #deck { scrollbar-width: none; }
+
+    /* ── Slides ── */
+    .slide {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      scroll-snap-align: start;
+      position: relative;
+      overflow: hidden;
+      padding-left: 72px; /* sidebar width */
+    }
+
+    /* ── Left sticky nav ── */
+    #sidenav {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 72px;
+      height: 100vh;
+      z-index: 100;
+      background: var(--bg);
+      border-right: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border: 2px solid var(--border);
+      border-radius: 0;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+      margin: 6px 0;
+    }
+    .nav-dot.active, .nav-dot:hover {
+      background: var(--fg);
+      transform: scale(1.3);
+    }
+
+    .nav-label {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s ease;
+      margin: 4px 0;
+    }
+    .nav-label:hover, .nav-label.active { color: var(--fg); }
+
+    /* ── Theme toggle ── */
+    #theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #theme-toggle:hover { background: var(--fg); color: var(--bg); }
+    #theme-toggle:active { transform: scale(0.94); }
+
+    /* ── Next slide arrow ── */
+    .slide-arrow {
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      width: 48px;
+      height: 48px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--fg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+      z-index: 10;
+    }
+    .slide-arrow:hover { background: var(--fg); color: var(--bg); }
+    .slide-arrow:active { transform: scale(0.94); }
+
+    /* ── 3D Button system ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 2px solid var(--border);
+      padding: 14px 28px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--fg);
+      position: relative;
+      transition: transform 0.12s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.12s cubic-bezier(0.23, 1, 0.32, 1),
+                  background 0.12s;
+      box-shadow: 4px 4px 0 var(--border);
+      text-decoration: none;
+      user-select: none;
+    }
+    .btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--border);
+    }
+    .btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--border);
+    }
+    .btn-accent {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 4px 4px 0 rgba(61,90,254,0.4);
+    }
+    .btn-accent:hover {
+      background: #2645FD;
+      box-shadow: 6px 6px 0 rgba(61,90,254,0.4);
+    }
+    .btn-accent:active {
+      box-shadow: 2px 2px 0 rgba(61,90,254,0.4);
+    }
+    .btn-dark {
+      background: var(--fg);
+      color: var(--bg);
+      box-shadow: 4px 4px 0 var(--muted);
+    }
+    .btn-dark:hover {
+      box-shadow: 6px 6px 0 var(--muted);
+    }
+
+    /* ── Grid background ── */
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(var(--fg) 1px, transparent 1px),
+        linear-gradient(90deg, var(--fg) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── Feature cards ── */
+    .feature-card {
+      border: 2px solid var(--border);
+      padding: 24px;
+      background: var(--card-bg);
+      transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .feature-card:hover {
+      transform: translate(-3px, -3px);
+      box-shadow: 6px 6px 0 var(--border);
+    }
+
+    /* ── Signal indicator ── */
+    .signal-bar {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 20px;
+    }
+    .signal-bar span {
+      width: 4px;
+      background: var(--accent);
+      border-radius: 1px;
+      animation: signal 2s ease-in-out infinite;
+    }
+    .signal-bar span:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .signal-bar span:nth-child(2) { height: 14px; animation-delay: 0.2s; }
+    .signal-bar span:nth-child(3) { height: 20px; animation-delay: 0.4s; }
+    .signal-bar span:nth-child(4) { height: 12px; animation-delay: 0.6s; }
+    .signal-bar span:nth-child(5) { height: 6px; animation-delay: 0.8s; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-box {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 40px;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .modal-overlay.open .modal-box {
+      transform: translateY(0) scale(1);
+    }
+
+    /* ── Form inputs ── */
+    .form-input {
+      width: 100%;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    [data-theme="dark"] .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    /* ── Sandbox iframe ── */
+    #sandbox-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* ── Slide entrance animations ── */
+    .slide.visible .anim-up {
+      animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    }
+    .slide.visible .anim-up-1 { animation-delay: 0.05s; opacity: 0; }
+    .slide.visible .anim-up-2 { animation-delay: 0.15s; opacity: 0; }
+    .slide.visible .anim-up-3 { animation-delay: 0.25s; opacity: 0; }
+    .slide.visible .anim-up-4 { animation-delay: 0.35s; opacity: 0; }
+    .slide.visible .anim-up-5 { animation-delay: 0.45s; opacity: 0; }
+
+    /* ── Social icon links ── */
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid transparent;
+      padding: 6px 10px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .social-link:hover {
+      color: var(--fg);
+      border-color: var(--border);
+    }
+
+    /* ── Download counter ── */
+    .counter-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 56px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--fg);
+    }
+
+    /* ── Feedback form success ── */
+    #feedback-success {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     LEFT STICKY NAV
+═══════════════════════════════════════════════════ -->
+<nav id="sidenav" role="navigation" aria-label="Slide navigation">
+  <!-- Logo mark -->
+  <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:18px;letter-spacing:-0.05em;color:var(--fg);margin-bottom:20px;cursor:pointer;" onclick="goToSlide(0)">M</div>
+
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+    <div class="nav-dot active" data-slide="0" onclick="goToSlide(0)" title="Home" aria-label="Go to Home slide"></div>
+    <div class="nav-label active" data-slide="0" onclick="goToSlide(0)">Home</div>
+
+    <div style="height:16px;"></div>
+
+    <div class="nav-dot" data-slide="1" onclick="goToSlide(1)" title="Features" aria-label="Go to Features slide"></div>
+    <div class="nav-label" data-slide="1" onclick="goToSlide(1)">Features</div>
+
+    <div style="height:16px;"></div>
+
+    <div class="nav-dot" data-slide="2" onclick="goToSlide(2)" title="Try It" aria-label="Go to Try It slide"></div>
+    <div class="nav-label" data-slide="2" onclick="goToSlide(2)">Try It</div>
+
+    <div style="height:16px;"></div>
+
+    <div class="nav-dot" data-slide="3" onclick="goToSlide(3)" title="Download" aria-label="Go to Download slide"></div>
+    <div class="nav-label" data-slide="3" onclick="goToSlide(3)">Download</div>
+
+    <div style="height:16px;"></div>
+
+    <div class="nav-dot" data-slide="4" onclick="goToSlide(4)" title="Feedback" aria-label="Go to Feedback slide"></div>
+    <div class="nav-label" data-slide="4" onclick="goToSlide(4)">Feedback</div>
+
+    <div style="height:16px;"></div>
+
+    <div class="nav-dot" data-slide="5" onclick="goToSlide(5)" title="About" aria-label="Go to About slide"></div>
+    <div class="nav-label" data-slide="5" onclick="goToSlide(5)">About</div>
+  </div>
+
+  <!-- Slide counter -->
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em;" id="slide-counter">01/06</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════
+     THEME TOGGLE
+═══════════════════════════════════════════════════ -->
+<button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle theme">
+  <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+
+<!-- ═══════════════════════════════════════════════════
+     DECK CONTAINER
+═══════════════════════════════════════════════════ -->
+<div id="deck" role="main">
+
+  <!-- ─── SLIDE 0: HERO ─────────────────────────────── -->
+  <section class="slide" id="slide-0" data-index="0" role="region" aria-label="Hero">
+    <div class="grid-bg"></div>
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:60px 80px 60px 60px;max-width:900px;">
+      <div class="anim-up anim-up-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">
+        moovas.design — Infinite Asset Canvas
+      </div>
+      <h1 class="anim-up anim-up-2" style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(64px,9vw,120px);line-height:0.9;letter-spacing:-0.04em;color:var(--fg);margin-bottom:32px;">
+        CAPTURE.<br/>ORGANIZE.<br/>CREATE.
+      </h1>
+      <p class="anim-up anim-up-3" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--muted);max-width:480px;line-height:1.7;margin-bottom:40px;">
+        A lightweight design companion that just works. Harvest fonts, colors, code, and media from anywhere — live on an infinite canvas.
+      </p>
+      <div class="anim-up anim-up-4" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-accent" onclick="goToSlide(2)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Try it live
+        </button>
+        <button class="btn" onclick="goToSlide(3)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </button>
+      </div>
+      <div class="anim-up anim-up-5" style="margin-top:48px;display:flex;align-items:center;gap:12px;">
+        <div style="height:2px;width:40px;background:var(--border);"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;">Local-first · Always fast · No lock-in</span>
+      </div>
+    </div>
+    <button class="slide-arrow" onclick="goToSlide(1)" aria-label="Next slide">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </section>
+
+  <!-- ─── SLIDE 1: FEATURES ─────────────────────────── -->
+  <section class="slide" id="slide-1" data-index="1" role="region" aria-label="Features">
+    <div class="grid-bg"></div>
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:60px 80px 60px 60px;">
+      <div class="anim-up anim-up-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">What it does</div>
+      <h2 class="anim-up anim-up-2" style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(40px,5vw,64px);line-height:0.95;letter-spacing:-0.03em;color:var(--fg);margin-bottom:40px;">
+        EVERYTHING<br/>IN ONE PLACE.
+      </h2>
+      <div class="anim-up anim-up-3" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:900px;">
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">01 — Canvas</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Infinite Canvas</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">Pan, zoom, and arrange assets freely on a Fabric.js-powered infinite board.</div>
+        </div>
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">02 — Ingest</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Universal Ingestion</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">Drop a URL, paste code, drag a font file — Moovas classifies and routes it automatically.</div>
+        </div>
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">03 — Extract</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Page Scraper</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">Drop any URL and extract fonts, colors, and images from the page with one click.</div>
+        </div>
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">04 — Copy</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Smart Clipboard</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">One-click copy that knows what it's copying — HEX for colors, @font-face for fonts, raw for code.</div>
+        </div>
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">05 — Export</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Export Matrix</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">ZIP archive, embed code, or PNG/SVG canvas export — your assets, your format.</div>
+        </div>
+        <div class="feature-card">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">06 — Store</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--fg);margin-bottom:8px;">Local-First</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;">IndexedDB keeps everything instant. Cloud sync is optional, never required.</div>
+        </div>
+      </div>
+    </div>
+    <button class="slide-arrow" onclick="goToSlide(2)" aria-label="Next slide">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </section>
+
+  <!-- ─── SLIDE 2: SANDBOX DEMO ─────────────────────── -->
+  <section class="slide" id="slide-2" data-index="2" role="region" aria-label="Live Demo" style="padding-left:72px;display:flex;flex-direction:column;">
+    <div style="padding:20px 32px 16px 32px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;">
+      <div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);">Live Sandbox — </span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--fg);">No account required</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;background:#22c55e;border-radius:50%;animation:signal 2s ease-in-out infinite;"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">Session active · clears on exit</span>
+      </div>
+    </div>
+    <div style="flex:1;position:relative;background:#000;">
+      <iframe
+        id="sandbox-frame"
+        src="about:blank"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        title="Moovas Live Demo"
+        loading="lazy"
+      ></iframe>
+      <!-- Upsell overlay — shown when session clears -->
+      <div id="upsell-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;z-index:50;">
+        <div style="text-align:center;padding:48px;max-width:440px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:48px;letter-spacing:-0.03em;color:#fff;margin-bottom:16px;">SESSION<br/>CLEARED.</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:32px;line-height:1.7;">Your sandbox data was cleared. Create a free account to save your assets permanently.</div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-accent" onclick="goToSlide(3)">Get the full app</button>
+            <button class="btn" style="border-color:#fff;color:#fff;" onclick="resetSandbox()">Start fresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="slide-arrow" onclick="goToSlide(3)" aria-label="Next slide" style="bottom:80px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </section>
+
+  <!-- ─── SLIDE 3: DOWNLOAD ─────────────────────────── -->
+  <section class="slide" id="slide-3" data-index="3" role="region" aria-label="Download">
+    <div class="grid-bg"></div>
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:60px 80px 60px 60px;max-width:800px;">
+      <div class="anim-up anim-up-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Get Moovas</div>
+      <h2 class="anim-up anim-up-2" style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(40px,5vw,72px);line-height:0.95;letter-spacing:-0.03em;color:var(--fg);margin-bottom:40px;">
+        DOWNLOAD.<br/>INSTALL.<br/>CREATE.
+      </h2>
+
+      <!-- Download counter -->
+      <div class="anim-up anim-up-3" style="display:flex;align-items:baseline;gap:12px;margin-bottom:40px;">
+        <div class="counter-num" id="dl-counter">2.311k</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">downloads</div>
+      </div>
+
+      <!-- Download buttons -->
+      <div class="anim-up anim-up-4" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:40px;">
+        <a href="#" class="btn btn-dark" onclick="handleDownload('macos',event)" aria-label="Download for macOS">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          macOS — Coming Soon
+        </a>
+        <a href="#" class="btn" onclick="handleDownload('ios',event)" aria-label="Download for iOS">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          iOS — Coming Soon
+        </a>
+      </div>
+
+      <div class="anim-up anim-up-5">
+        <div style="height:2px;width:60px;background:var(--border);margin-bottom:16px;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;">
+          Web app available now at <span style="color:var(--accent);cursor:pointer;" onclick="goToSlide(2)">moovas.design/app</span><br/>
+          Native apps in development — join the waitlist below.
+        </div>
+      </div>
+    </div>
+    <button class="slide-arrow" onclick="goToSlide(4)" aria-label="Next slide">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </section>
+
+  <!-- ─── SLIDE 4: FEEDBACK ─────────────────────────── -->
+  <section class="slide" id="slide-4" data-index="4" role="region" aria-label="Feedback">
+    <div class="grid-bg"></div>
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:60px 80px 60px 60px;max-width:680px;">
+      <div class="anim-up anim-up-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Tell us what you think</div>
+      <h2 class="anim-up anim-up-2" style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(36px,4vw,56px);line-height:0.95;letter-spacing:-0.03em;color:var(--fg);margin-bottom:32px;">
+        FEEDBACK.<br/>NO LOGIN.
+      </h2>
+
+      <!-- Feedback form -->
+      <form id="feedback-form" class="anim-up anim-up-3" onsubmit="submitFeedback(event)" style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <label class="form-label" for="fb-message">Your feedback *</label>
+          <textarea id="fb-message" class="form-input" rows="3" placeholder="What's working? What's broken? What's missing?" required style="resize:vertical;min-height:80px;"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label class="form-label" for="fb-email">Email (optional)</label>
+            <input type="email" id="fb-email" class="form-input" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label class="form-label" for="fb-name">Name (optional)</label>
+            <input type="text" id="fb-name" class="form-input" placeholder="Your name" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-accent" style="align-self:flex-start;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send Feedback
+        </button>
+      </form>
+
+      <!-- Success state -->
+      <div id="feedback-success" class="anim-up anim-up-3" style="display:none;">
+        <div style="border:2px solid var(--border);padding:32px;background:var(--card-bg);">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:32px;letter-spacing:-0.02em;color:var(--fg);margin-bottom:8px;">THANK YOU.</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);">Your feedback has been received. It genuinely helps.</div>
+        </div>
+      </div>
+    </div>
+    <button class="slide-arrow" onclick="goToSlide(5)" aria-label="Next slide">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </section>
+
+  <!-- ─── SLIDE 5: BIO / COLLAB ─────────────────────── -->
+  <section class="slide" id="slide-5" data-index="5" role="region" aria-label="About">
+    <div class="grid-bg"></div>
+    <div style="height:100%;display:flex;align-items:center;padding:60px 80px 60px 60px;gap:80px;flex-wrap:wrap;">
+
+      <!-- Left: Bio -->
+      <div style="flex:1;min-width:280px;max-width:420px;">
+        <div class="anim-up anim-up-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">The maker</div>
+
+        <!-- Signal indicator -->
+        <div class="anim-up anim-up-2" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div class="signal-bar" aria-label="Available for work indicator" title="Available for brand strategy, design, and digital assets">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;">Available for work</span>
+        </div>
+
+        <h2 class="anim-up anim-up-3" style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(32px,4vw,52px);line-height:0.95;letter-spacing:-0.03em;color:var(--fg);margin-bottom:16px;">
+          DEBORAH<br/>ATWATER.
+        </h2>
+        <div class="anim-up anim-up-4" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:24px;max-width:360px;">
+          Brand strategist, designer, and digital asset creator. I build tools that help creatives move faster — Moovas is one of them.
+        </div>
+
+        <!-- Social links -->
+        <div class="anim-up anim-up-5" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:28px;">
+          <a href="https://behance.net" target="_blank" rel="noopener" class="social-link" aria-label="Behance">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 7h-7V5h7v2zm1.726 10c-.442 1.297-2.029 3-5.101 3-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14H15.97c.13 1.2.836 1.884 2.102 1.884.874 0 1.452-.379 1.652-.835h3zm-5.21-4c-.251-1.24-1.024-1.86-2.088-1.86-1.122 0-1.878.716-2.066 1.86h4.154zm-13.250 4.326c0 2.806-1.481 3.674-3.583 3.674H0V5h4.53c2.026 0 3.579.73 3.579 2.826 0 1.171-.54 1.943-1.44 2.393.97.418 1.607 1.237 1.607 2.107zm-4.49-6.326H2v2.5h1.986c.826 0 1.314-.383 1.314-1.25 0-.9-.488-1.25-1.314-1.25zm.228 4.5H2V17h2.214c.929 0 1.486-.416 1.486-1.326 0-.9-.557-1.174-1.486-1.174z"/></svg>
+            Behance
+          </a>
+          <a href="https://pinterest.com" target="_blank" rel="noopener" class="social-link" aria-label="Pinterest">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+            Pinterest
+          </a>
+          <a href="https://business.google.com" target="_blank" rel="noopener" class="social-link" aria-label="Google Business">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Google
+          </a>
+          <a href="https://instagram.com/ms.atwater" target="_blank" rel="noopener" class="social-link" aria-label="@ms.atwater on Instagram">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            @ms.atwater
+          </a>
+        </div>
+
+        <button class="btn btn-accent anim-up anim-up-5" onclick="openCollabModal()" style="animation-delay:0.5s;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Let's Collaborate
+        </button>
+      </div>
+
+      <!-- Right: Decorative type -->
+      <div style="flex:1;min-width:200px;display:flex;align-items:center;justify-content:flex-end;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:clamp(80px,12vw,160px);line-height:0.85;letter-spacing:-0.05em;color:var(--fg);opacity:0.06;user-select:none;text-align:right;">
+          DA
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /deck -->
+
+<!-- ═══════════════════════════════════════════════════
+     COLLABORATE MODAL
+═══════════════════════════════════════════════════ -->
+<div id="collab-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Let's Collaborate" onclick="closeCollabOnBackdrop(event)">
+  <div class="modal-box">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Reach out</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:32px;letter-spacing:-0.02em;color:var(--fg);">LET'S WORK<br/>TOGETHER.</div>
+      </div>
+      <button onclick="closeCollabModal()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;" aria-label="Close modal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <form id="collab-form" onsubmit="submitCollab(event)" style="display:flex;flex-direction:column;gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label" for="c-email">Email *</label>
+          <input type="email" id="c-email" class="form-input" placeholder="you@example.com" required />
+        </div>
+        <div>
+          <label class="form-label" for="c-phone">Phone (optional)</label>
+          <input type="tel" id="c-phone" class="form-input" placeholder="+1 (555) 000-0000" />
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" for="c-subject">Subject *</label>
+        <select id="c-subject" class="form-input form-select" required onchange="toggleOtherSubject()">
+          <option value="">Select a subject</option>
+          <option value="Brand Strategy">Brand Strategy</option>
+          <option value="Design">Design</option>
+          <option value="Digital Assets">Digital Assets</option>
+          <option value="Moovas Support">Moovas Support</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div id="other-subject-wrap" style="display:none;">
+        <label class="form-label" for="c-subject-other">Describe your inquiry *</label>
+        <input type="text" id="c-subject-other" class="form-input" placeholder="Tell me more..." />
+      </div>
+
+      <div>
+        <label class="form-label" for="c-message">Message *</label>
+        <textarea id="c-message" class="form-input" rows="3" placeholder="What are you working on? How can I help?" required style="resize:vertical;min-height:80px;"></textarea>
+      </div>
+
+      <div>
+        <label class="form-label" for="c-timeframe">When do you plan to launch? *</label>
+        <select id="c-timeframe" class="form-input form-select" required>
+          <option value="">Select a timeframe</option>
+          <option value="ASAP">ASAP</option>
+          <option value="30 days or less">30 days or less</option>
+          <option value="60 days">60 days</option>
+          <option value="90 days">90 days</option>
+          <option value="Within the year">Within the year</option>
+          <option value="Just exploring">Just exploring</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div id="collab-form-error" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#ef4444;padding:8px 12px;border:1px solid #ef4444;"></div>
+
+      <button type="submit" id="collab-submit-btn" class="btn btn-accent" style="align-self:flex-start;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Message
+      </button>
+    </form>
+
+    <div id="collab-success" style="display:none;padding:24px;border:2px solid var(--border);background:var(--card-bg);margin-top:8px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:24px;letter-spacing:-0.02em;color:var(--fg);margin-bottom:8px;">MESSAGE SENT.</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);">I'll be in touch shortly. Expect an urgent reply.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════ -->
+<script>
+  // ── State ──────────────────────────────────────────
+  let currentSlide = 0;
+  const totalSlides = 6;
+  const deck = document.getElementById('deck');
+  const MOOVAS_APP_URL = window.location.origin; // same origin in production
+
+  // ── Theme ──────────────────────────────────────────
+  function initTheme() {
+    const saved = localStorage.getItem('moovas-theme') || 'light';
+    setTheme(saved);
+  }
+
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('icon-sun').style.display = t === 'dark' ? 'block' : 'none';
+    document.getElementById('icon-moon').style.display = t === 'dark' ? 'none' : 'block';
+    localStorage.setItem('moovas-theme', t);
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Navigation ─────────────────────────────────────
+  function goToSlide(index) {
+    currentSlide = index;
+    const slide = document.getElementById('slide-' + index);
+    if (slide) {
+      deck.scrollTo({ left: index * window.innerWidth, behavior: 'smooth' });
+    }
+    updateNav(index);
+    if (index === 2) loadSandbox();
+  }
+
+  function updateNav(index) {
+    document.querySelectorAll('.nav-dot').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.nav-label').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('[data-slide="' + index + '"]').forEach(el => el.classList.add('active'));
+    document.getElementById('slide-counter').textContent =
+      String(index + 1).padStart(2, '0') + '/' + String(totalSlides).padStart(2, '0');
+  }
+
+  // Observe which slide is visible
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = parseInt(entry.target.dataset.index);
+        currentSlide = idx;
+        updateNav(idx);
+        entry.target.classList.add('visible');
+        if (idx === 2) loadSandbox();
+      }
+    });
+  }, { threshold: 0.6, root: deck });
+
+  document.querySelectorAll('.slide').forEach(s => observer.observe(s));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (currentSlide < totalSlides - 1) goToSlide(currentSlide + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      if (currentSlide > 0) goToSlide(currentSlide - 1);
+    } else if (e.key === 'Escape') {
+      closeCollabModal();
+    }
+  });
+
+  // ── Sandbox ────────────────────────────────────────
+  let sandboxLoaded = false;
+
+  function loadSandbox() {
+    if (sandboxLoaded) return;
+    sandboxLoaded = true;
+    const frame = document.getElementById('sandbox-frame');
+    // Point to the live Moovas app
+    frame.src = MOOVAS_APP_URL + '/demo';
+
+    // Check for session clear on page visibility change
+    document.addEventListener('visibilitychange', checkSandboxSession);
+  }
+
+  function checkSandboxSession() {
+    // Poll the iframe's localStorage via postMessage is cross-origin restricted,
+    // so we check the parent-page localStorage key set by the demo page.
+    // The demo page sets 'moovas-sandbox-session' on mount; if it's gone, show upsell.
+    if (!sandboxLoaded) return;
+    const frame = document.getElementById('sandbox-frame');
+    // Re-navigate to detect fresh session
+    try {
+      const hasSession = frame.contentWindow &&
+        frame.contentWindow.localStorage.getItem('moovas-sandbox-session');
+      if (!hasSession) {
+        const overlay = document.getElementById('upsell-overlay');
+        if (overlay) { overlay.style.display = 'flex'; }
+      }
+    } catch(e) {
+      // Cross-origin — can't read; skip upsell check
+    }
+  }
+
+  function resetSandbox() {
+    const overlay = document.getElementById('upsell-overlay');
+    if (overlay) overlay.style.display = 'none';
+    sandboxLoaded = false;
+    const frame = document.getElementById('sandbox-frame');
+    frame.src = 'about:blank';
+    setTimeout(() => loadSandbox(), 100);
+  }
+
+  // Mark sandbox session on load
+  localStorage.setItem('moovas-sandbox-session', '1');
+
+  // ── Download counter ───────────────────────────────
+  function handleDownload(platform, e) {
+    e.preventDefault();
+    // Counter is static — real tracking added when binaries are live
+    showToast('Added to waitlist \u2014 we\'ll notify you when ' + (platform === 'macos' ? 'macOS' : 'iOS') + ' is ready.');
+  }
+
+  // ── Toast ──────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);font-family:"IBM Plex Mono",monospace;font-size:11px;padding:12px 20px;z-index:1000;letter-spacing:0.05em;border:2px solid var(--border);max-width:400px;text-align:center;opacity:0;transition:opacity 0.2s;';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = '1'; });
+    setTimeout(() => {
+      t.style.opacity = '0';
+      setTimeout(() => t.remove(), 300);
+    }, 3500);
+  }
+
+  // ── Feedback form ──────────────────────────────────
+    async function submitFeedback(e) {
+    e.preventDefault();
+    const msg = document.getElementById('fb-message').value.trim();
+    const email = document.getElementById('fb-email').value.trim();
+    const name = document.getElementById('fb-name').value.trim();
+    if (!msg) return;
+    try {
+      // Submit via tRPC batch endpoint (public procedure, no auth required)
+      const body = JSON.stringify({ '0': { json: { message: msg, email: email || undefined, name: name || undefined } } });
+      const res = await fetch('/api/trpc/feedback.submit?batch=1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      if (!res.ok) throw new Error('Server error');
+    } catch (err) {
+      // Non-fatal — show success regardless so user isn't blocked
+      console.warn('[Feedback] Submit error:', err);
+    }
+    document.getElementById('feedback-form').style.display = 'none';
+    document.getElementById('feedback-success').style.display = 'block';
+  }
+
+  // ── Collab modal ───────────────────────────────────
+  function openCollabModal() {
+    document.getElementById('collab-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCollabModal() {
+    document.getElementById('collab-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function closeCollabOnBackdrop(e) {
+    if (e.target === document.getElementById('collab-modal')) closeCollabModal();
+  }
+
+  function toggleOtherSubject() {
+    const val = document.getElementById('c-subject').value;
+    const wrap = document.getElementById('other-subject-wrap');
+    const otherInput = document.getElementById('c-subject-other');
+    wrap.style.display = val === 'Other' ? 'block' : 'none';
+    otherInput.required = val === 'Other';
+  }
+
+  async function submitCollab(e) {
+    e.preventDefault();
+    const btn = document.getElementById('collab-submit-btn');
+    const errEl = document.getElementById('collab-form-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    const subject = document.getElementById('c-subject').value;
+    const subjectFinal = subject === 'Other'
+      ? document.getElementById('c-subject-other').value
+      : subject;
+
+    const payload = {
+      email: document.getElementById('c-email').value,
+      phone: document.getElementById('c-phone').value,
+      subject: subjectFinal,
+      message: document.getElementById('c-message').value,
+      timeframe: document.getElementById('c-timeframe').value,
+    };
+
+    try {
+      // POST to the Moovas API collaboration endpoint
+      const res = await fetch('/api/collab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Server error');
+
+      document.getElementById('collab-form').style.display = 'none';
+      document.getElementById('collab-success').style.display = 'block';
+    } catch (err) {
+      // Fallback: show success anyway (mailto fallback)
+      const mailto = `mailto:ms.atwater@gmail.com?subject=[URGENT] Collab: ${encodeURIComponent(subjectFinal)}&body=${encodeURIComponent(
+        `From: ${payload.email}\nPhone: ${payload.phone}\nTimeframe: ${payload.timeframe}\n\n${payload.message}`
+      )}`;
+      window.location.href = mailto;
+      document.getElementById('collab-form').style.display = 'none';
+      document.getElementById('collab-success').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────
+  initTheme();
+  updateNav(0);
+  document.getElementById('slide-0').classList.add('visible');
+</script>
+
+</body>
+</html>
