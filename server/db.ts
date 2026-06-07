@@ -61,6 +61,35 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createEmailUser(data: { email: string; name: string; passwordHash: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const openId = `email_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  await db.insert(users).values({
+    openId,
+    email: data.email,
+    name: data.name,
+    loginMethod: "email",
+    passwordHash: data.passwordHash,
+    emailVerified: 0,
+    lastSignedIn: new Date(),
+  });
+  return getUserByEmail(data.email);
+}
+
+export async function updateUserLastSignedIn(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
+}
+
 // ─── Assets ───────────────────────────────────────────────────────────────────
 
 export async function createAsset(asset: InsertAsset) {

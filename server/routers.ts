@@ -1,18 +1,24 @@
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
+import { sdk } from "./_core/sdk";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import bcrypt from "bcryptjs";
 import {
   createAsset,
   createCanvasTab,
   createCollection,
+  createEmailUser,
   deleteAsset,
   deleteCollection,
   getAssetsByUser,
   getCanvasTabsByUser,
   getCollectionsByUser,
+  getUserByEmail,
   updateAsset,
+  updateUserLastSignedIn,
 } from "./db";
 import { scrapeUrl } from "./scraper";
 import { storagePut } from "./storage";
@@ -171,6 +177,42 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+
+    register: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        name: z.string().min(1).max(120),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await getUserByEmail(input.email);
+        if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists" });
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        const user = await createEmailUser({ email: input.email, name: input.name, passwordHash });
+        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create account" });
+        const token = await sdk.createSessionToken(user.openId, { name: user.name ?? "" });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true, user: { id: user.id, email: user.email, name: user.name } };
+      }),
+
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await getUserByEmail(input.email);
+        if (!user || !user.passwordHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        const valid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        await updateUserLastSignedIn(user.id);
+        const token = await sdk.createSessionToken(user.openId, { name: user.name ?? "" });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true, user: { id: user.id, email: user.email, name: user.name } };
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

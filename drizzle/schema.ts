@@ -21,6 +21,10 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** Hashed password for email/password auth (bcrypt) */
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  /** Whether the email has been verified (0 = no, 1 = yes) */
+  emailVerified: int("emailVerified").default(0).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

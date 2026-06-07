@@ -15,6 +15,13 @@
       "when": 1780756415977,
       "tag": "0001_nebulous_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1780796599865,
+      "tag": "0002_clumsy_peter_quill",
+      "breakpoints": true
     }
   ]
 }

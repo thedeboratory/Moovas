@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { X, Link2, FileCode, Palette, Type, Image, File } from "lucide-react";
+import { X, Link2, FileCode, Palette, Type, Image, File, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { saveAssetLocally, markAssetSynced } from "@/lib/db";
@@ -12,6 +12,14 @@ interface IngestionOverlayProps {
   targetTab: TabName;
 }
 
+const ACCEPTED_TYPES = [
+  ".ttf", ".otf", ".woff", ".woff2",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif",
+  ".mp4", ".webm", ".mov",
+  ".html", ".css", ".js", ".ts", ".json", ".md", ".txt",
+  "image/*", "video/*", "font/*", "text/*",
+].join(",");
+
 export default function IngestionOverlay({
   onClose,
   onAssetAdded,
@@ -20,14 +28,18 @@ export default function IngestionOverlay({
   const [isDragging, setIsDragging] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingLabel, setProcessingLabel] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0); // track nested drag enter/leave
 
   const createAsset = trpc.assets.create.useMutation();
 
   const processInput = useCallback(
-    async (raw: string, file?: File) => {
+    async (raw: string, file?: File, label?: string) => {
       if (!raw.trim() && !file) return;
       setIsProcessing(true);
+      setProcessingLabel(label ?? "Processing…");
 
       try {
         const classified = classifyAsset(raw, file);
@@ -36,7 +48,6 @@ export default function IngestionOverlay({
             ? (classified.suggestedTab as TabName)
             : targetTab;
 
-        // Save locally first (local-first)
         const local = await saveAssetLocally({
           tab,
           type: classified.type as AssetType,
@@ -50,7 +61,6 @@ export default function IngestionOverlay({
           canvasHeight: classified.type === "color" ? 160 : 180,
         });
 
-        // Sync to remote
         const result = await createAsset.mutateAsync({
           tab,
           type: classified.type as AssetType,
@@ -75,63 +85,124 @@ export default function IngestionOverlay({
         toast.error("Failed to add asset");
       } finally {
         setIsProcessing(false);
+        setProcessingLabel("");
       }
     },
     [createAsset, onAssetAdded, targetTab]
   );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-
-      const text = e.dataTransfer.getData("text/plain");
-      const files = Array.from(e.dataTransfer.files);
-
-      if (files.length > 0) {
-        files.forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            processInput(ev.target?.result as string ?? "", file);
-          };
+  // ── File processing helper ─────────────────────────────────────────────────
+  const processFiles = useCallback(
+    (files: File[]) => {
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          processInput(ev.target?.result as string ?? "", file, `Adding ${file.name}…`);
+        };
+        // Read text files as text, everything else as data URL
+        if (file.type.startsWith("text/") || /\.(html|css|js|ts|json|md|txt|svg)$/i.test(file.name)) {
+          reader.readAsText(file);
+        } else {
           reader.readAsDataURL(file);
-        });
-      } else if (text) {
-        processInput(text);
-      }
+        }
+      });
     },
     [processInput]
   );
 
+  // ── Drag and drop ──────────────────────────────────────────────────────────
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+
+      const text = e.dataTransfer.getData("text/plain") || e.dataTransfer.getData("text/uri-list");
+      const files = Array.from(e.dataTransfer.files);
+
+      if (files.length > 0) {
+        processFiles(files);
+      } else if (text) {
+        processInput(text, undefined, "Processing dropped content…");
+      }
+    },
+    [processFiles, processInput]
+  );
+
+  // ── Paste ──────────────────────────────────────────────────────────────────
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
       const text = e.clipboardData.getData("text/plain");
       const files = Array.from(e.clipboardData.files);
 
       if (files.length > 0) {
-        files.forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            processInput(ev.target?.result as string ?? "", file);
-          };
-          reader.readAsDataURL(file);
-        });
+        e.preventDefault();
+        processFiles(files);
       } else if (text) {
         setInputValue(text);
       }
     },
-    [processInput]
+    [processFiles]
+  );
+
+  // ── File input (upload button) ─────────────────────────────────────────────
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      if (files.length > 0) processFiles(files);
+      // Reset so same file can be re-selected
+      e.target.value = "";
+    },
+    [processFiles]
   );
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
-      processInput(inputValue.trim());
+      processInput(inputValue.trim(), undefined, "Processing…");
       setInputValue("");
     }
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col">
+    <div
+      className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={ACCEPTED_TYPES}
+        className="sr-only"
+        onChange={handleFileInputChange}
+        aria-label="Upload files"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-5 border-b-2 border-black">
         <div>
@@ -145,20 +216,14 @@ export default function IngestionOverlay({
         <button
           onClick={onClose}
           className="p-2 hover:bg-black hover:text-white transition-colors press-feedback border-2 border-black"
+          aria-label="Close"
         >
           <X size={16} strokeWidth={2.5} />
         </button>
       </div>
 
-      {/* Drop zone */}
-      <div
-        className={`flex-1 flex flex-col items-center justify-center p-8 transition-colors ${
-          isDragging ? "bg-black/5" : ""
-        }`}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-      >
+      {/* Body */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
         {/* Asset type hints */}
         <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-xl">
           {[
@@ -184,22 +249,40 @@ export default function IngestionOverlay({
           ))}
         </div>
 
-        {/* Drop target */}
-        <div
-          className={`w-full max-w-xl border-2 border-dashed transition-all ${
-            isDragging ? "border-black bg-black/5" : "border-black/20"
-          } p-8 text-center mb-6`}
-        >
-          <div className="font-display text-3xl text-black/20 tracking-tighter mb-2">
-            DROP HERE
-          </div>
-          <div className="font-mono text-xs text-black/30 uppercase tracking-widest">
-            or paste / type below
+        {/* Drop zone + upload button */}
+        <div className="w-full max-w-xl mb-6">
+          <div
+            className={`border-2 border-dashed transition-all p-8 text-center ${
+              isDragging
+                ? "border-black bg-black/5 scale-[1.01]"
+                : "border-black/20 hover:border-black/40"
+            }`}
+          >
+            <div className="font-display text-3xl text-black/20 tracking-tighter mb-2">
+              {isDragging ? "RELEASE TO ADD" : "DROP HERE"}
+            </div>
+            <div className="font-mono text-xs text-black/30 uppercase tracking-widest mb-5">
+              or use the button below
+            </div>
+
+            {/* Upload button — visible, accessible fallback */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing}
+              className="inline-flex items-center gap-2 border-2 border-black bg-white text-black font-mono font-bold text-xs uppercase tracking-widest px-5 py-2.5 press-feedback hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Upload size={13} strokeWidth={2.5} />
+              Choose Files
+            </button>
           </div>
         </div>
 
-        {/* Text input */}
+        {/* Text / URL input */}
         <div className="w-full max-w-xl">
+          <div className="font-mono text-[10px] text-black/40 uppercase tracking-widest mb-2">
+            Paste a URL, color, or code snippet
+          </div>
           <textarea
             ref={textareaRef}
             value={inputValue}
@@ -208,19 +291,19 @@ export default function IngestionOverlay({
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit();
             }}
-            placeholder="Paste a URL, color value, code snippet, or any text..."
+            placeholder="https://example.com  ·  #3D5AFE  ·  .btn { ... }"
             className="w-full h-24 border-2 border-black bg-white font-mono text-sm text-black placeholder:text-black/20 p-4 resize-none focus:outline-none focus:ring-0"
           />
           <div className="flex items-center justify-between mt-2">
             <div className="font-mono text-[10px] text-black/30 uppercase tracking-widest">
-              ⌘+Enter to add
+              {isProcessing ? processingLabel : "⌘+Enter to add"}
             </div>
             <button
               onClick={handleSubmit}
               disabled={!inputValue.trim() || isProcessing}
               className="flex items-center gap-2 bg-black text-white font-mono font-bold text-xs uppercase tracking-widest px-5 py-2.5 press-feedback disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/80 transition-colors"
             >
-              {isProcessing ? "Processing..." : "[ Add Asset ]"}
+              {isProcessing ? "Processing…" : "[ Add Asset ]"}
             </button>
           </div>
         </div>

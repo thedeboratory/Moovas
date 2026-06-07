@@ -68,7 +68,7 @@
 - [x] [Extract Assets] button on link preview cards
 - [x] Right sidebar drawer showing extracted asset candidates with checkboxes
 - [x] Import selected assets → route to correct tabs (fonts→Fonts, colors→Colors, images→Media)
-- [ ] /extension stub directory in repo for future Chrome extension
+- [x] /extension stub directory in repo for future Chrome extension
 
 ## Testing & Polish
 - [x] Vitest unit tests for ingestion pipeline (asset classifier)
@@ -80,4 +80,46 @@
 - [ ] Font specimen preview component
 - [ ] Asset detail modal
 - [x] /extension Chrome extension stub (manifest.json, content.js, background.js, popup.html, popup.js, README.md)
-- [ ] Final GitHub push with all milestone tags
+- [x] Final GitHub push with all milestone tags
+
+## App Fixes
+
+- [x] Fix canvas drag-and-drop failing when app opened in a new window
+- [x] Add file upload button (input[type=file]) as proper fallback in ingestion overlay
+- [x] Replace Manus OAuth with email + password auth
+
+## Phase 3 — moovas.design Deck Site
+
+- [ ] Horizontal scroll-snap deck shell (HTML5 / Tailwind CDN / Vanilla JS)
+- [ ] Left-side sticky nav that stays fixed across all slides
+- [ ] Light/dark mode toggle top-right on every screen
+- [ ] 3D button system: flat face, hover lifts, click depresses, accent color #3D5AFE on major CTAs
+- [ ] Subtle entrance animations on slide content
+- [ ] Slide 1: Hero — "A lightweight design companion that just works." + CTA
+- [ ] Slide 2: Features overview
+- [ ] Slide 3: Live sandbox demo (Moovas iframe, localStorage session, upsell on clear)
+- [ ] Slide 4: Download (macOS + iOS placeholder links, static counter starting at 2.311k)
+- [ ] Slide 5: Feedback form (no login, anonymous-friendly)
+- [ ] Slide 6: Bio — Deborah Atwater, pulsing signal indicator, social links (Behance/Pinterest/Google Business/@ms.atwater)
+- [ ] "Let's Collaborate" button — opens modal, sends urgency-flagged email to ms.atwater@gmail.com
+- [ ] Collaborate modal fields: email, phone, subject dropdown + custom Other field, message, launch timeframe dropdown
+- [ ] Simple icons (no emoji) throughout
+- [ ] GitHub push for deck site
+
+## Deferred / Tracked
+
+- [ ] Payment flow: Buy Me a Coffee embed, $5 variable amount suggestions
+- [ ] Pre-seeded demo assets in sandbox iframe (after app is stable)
+- [ ] Real download counter increment on actual download
+- [ ] Live "online" toggle for bio indicator
+
+## Auth Replacement (Manus OAuth → Email + Password)
+
+- [x] Add passwordHash and emailVerified columns to users table (schema + migration)
+- [x] Install bcrypt, wire password hashing in register/login procedures
+- [x] Add register and login tRPC procedures (publicProcedure)
+- [x] Replace Manus OAuth callback with email/password session flow
+- [x] Build Login/Register page with brutalist design
+- [x] Update useAuth hook to work with new session model
+- [x] Update all protected routes to redirect to /login
+- [ ] Remove Manus OAuth dependency from server/_core

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -82,7 +81,7 @@ export default function MoovasLayout({ children, activeTab }: MoovasLayoutProps)
 
           {/* Login CTA */}
           <a
-            href={getLoginUrl()}
+            href="/login"
             className="inline-flex items-center gap-3 bg-black text-white font-mono font-bold text-sm uppercase tracking-widest px-8 py-4 press-feedback transition-all duration-150 hover:bg-black/80"
           >
             <span>[</span>
@@ -91,7 +90,7 @@ export default function MoovasLayout({ children, activeTab }: MoovasLayoutProps)
           </a>
 
           <div className="mt-8 text-xs font-mono text-black/30 uppercase tracking-widest">
-            Manus OAuth — Secure
+            Email · Password · Secure
           </div>
         </div>
       </div>
