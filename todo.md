@@ -122,4 +122,4 @@
 - [x] Build Login/Register page with brutalist design
 - [x] Update useAuth hook to work with new session model
 - [x] Update all protected routes to redirect to /login
-- [ ] Remove Manus OAuth dependency from server/_core
+- [x] Remove Manus OAuth dependency from server/_core (sdk.ts stripped of OAuthService/HTTP client; oauth.ts stubbed as no-op; server no longer logs [OAuth] on startup)
