@@ -55,12 +55,12 @@ export default function AssetTabPage({ tab, title }: AssetTabPageProps) {
     <MoovasLayout activeTab={tab}>
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-8 py-4 border-b-2 border-black flex-shrink-0">
+        <div className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4 border-b-2 border-black flex-shrink-0">
           <div>
             <div className="font-mono text-[10px] text-black/40 uppercase tracking-widest">
               Library
             </div>
-            <div className="font-display text-2xl text-black tracking-tighter leading-none">
+            <div className="font-display text-xl md:text-2xl text-black tracking-tighter leading-none">
               {title.toUpperCase()}
             </div>
           </div>
@@ -79,9 +79,9 @@ export default function AssetTabPage({ tab, title }: AssetTabPageProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 md:p-6">
           {assetsQuery.isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-48 bg-black/5 animate-pulse border-2 border-black/5" />
               ))}
@@ -104,7 +104,7 @@ export default function AssetTabPage({ tab, title }: AssetTabPageProps) {
             </div>
           ) : (
             <div
-              className={`grid gap-4 ${
+              className={`grid gap-3 md:gap-4 ${
                 tab === "colors"
                   ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
                   : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"

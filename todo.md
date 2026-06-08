@@ -126,17 +126,17 @@
 
 ## Mobile Responsiveness
 
-- [ ] App shell: canvas-first on mobile, left/right icon strips for tools, hamburger top-left for login/logout/export, light/dark toggle top-right
-- [ ] MoovasLayout: collapse sidebar to icon strip on mobile, hamburger drawer for secondary actions
-- [ ] LoginPage: fully responsive on mobile
-- [ ] All tab pages (Fonts, Colors, Code, Media, Bookmarks): responsive grid/list layout on mobile
-- [ ] Deck site: vertical scroll on mobile, all 6 slides fully responsive
+- [x] App shell: canvas-first on mobile, left/right icon strips for tools, hamburger top-left for login/logout/export, light/dark toggle top-right
+- [x] MoovasLayout: collapse sidebar to icon strip on mobile, hamburger drawer for secondary actions
+- [x] LoginPage: fully responsive on mobile (dvh fix for iOS Safari)
+- [x] All tab pages (Fonts, Colors, Code, Media, Bookmarks): responsive grid/list layout on mobile
+- [x] Deck site: vertical scroll on mobile, all 6 slides fully responsive, mobile bottom nav bar
 
 ## Waitlist
 
-- [ ] Create waitlist table in DB (email, platform, consentMarketing, consentTimestamp, createdAt)
-- [ ] Generate and apply Drizzle migration for waitlist table
-- [ ] Add waitlist.join tRPC procedure (publicProcedure, validates email + consent required)
-- [ ] Replace fake waitlist toast on Download buttons with real email + consent modal
-- [ ] Consent language: CAN-SPAM/GDPR compliant standard opt-in checkbox language
-- [ ] Notify owner (ms.atwater@gmail.com) on each new waitlist signup
+- [x] Create waitlist table in DB (email, platform, consentMarketing, consentTimestamp, createdAt)
+- [x] Generate and apply Drizzle migration for waitlist table
+- [x] Add waitlist.join tRPC procedure (publicProcedure, validates email + consent required)
+- [x] Replace fake waitlist toast on Download buttons with real email + consent modal
+- [x] Consent language: CAN-SPAM/GDPR compliant standard opt-in checkbox language
+- [x] Notify owner (ms.atwater@gmail.com) on each new waitlist signup (via notifyOwner helper)

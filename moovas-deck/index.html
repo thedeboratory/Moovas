@@ -1114,7 +1114,7 @@
     btn.disabled = true;
     btn.textContent = 'Submitting…';
     try {
-      const body = JSON.stringify({ '0': { json: { email, platform: waitlistPlatform, consentGiven: true } } });
+      const body = JSON.stringify({ '0': { json: { email, platform: waitlistPlatform || 'both', marketingConsent: true } } });
       const res = await fetch('/api/trpc/waitlist.join?batch=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
