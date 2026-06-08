@@ -266,6 +266,46 @@ export const appRouter = router({
         }
       }),
   }),
+
+  // ── Waitlist (public, no auth) ─────────────────────────────────────────────
+  waitlist: router({
+    join: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          platform: z.enum(["macos", "ios", "both"]).default("both"),
+          marketingConsent: z.boolean(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        if (!input.marketingConsent) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You must agree to receive updates to join the waitlist.",
+          });
+        }
+        const { addToWaitlist } = await import("./db");
+        const result = await addToWaitlist({
+          email: input.email,
+          platform: input.platform,
+          marketingConsent: 1,
+        });
+        if (result.alreadyExists) {
+          return { success: true, alreadyOnList: true };
+        }
+        // Notify owner of new waitlist signup
+        try {
+          const { notifyOwner } = await import("./_core/notification");
+          await notifyOwner({
+            title: `[Waitlist] New signup: ${input.email}`,
+            content: `Platform: ${input.platform}\nEmail: ${input.email}\nMarketing consent: yes`,
+          });
+        } catch (e) {
+          console.warn("[Waitlist] Notification failed:", e);
+        }
+        return { success: true, alreadyOnList: false };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

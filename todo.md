@@ -123,3 +123,20 @@
 - [x] Update useAuth hook to work with new session model
 - [x] Update all protected routes to redirect to /login
 - [x] Remove Manus OAuth dependency from server/_core (sdk.ts stripped of OAuthService/HTTP client; oauth.ts stubbed as no-op; server no longer logs [OAuth] on startup)
+
+## Mobile Responsiveness
+
+- [ ] App shell: canvas-first on mobile, left/right icon strips for tools, hamburger top-left for login/logout/export, light/dark toggle top-right
+- [ ] MoovasLayout: collapse sidebar to icon strip on mobile, hamburger drawer for secondary actions
+- [ ] LoginPage: fully responsive on mobile
+- [ ] All tab pages (Fonts, Colors, Code, Media, Bookmarks): responsive grid/list layout on mobile
+- [ ] Deck site: vertical scroll on mobile, all 6 slides fully responsive
+
+## Waitlist
+
+- [ ] Create waitlist table in DB (email, platform, consentMarketing, consentTimestamp, createdAt)
+- [ ] Generate and apply Drizzle migration for waitlist table
+- [ ] Add waitlist.join tRPC procedure (publicProcedure, validates email + consent required)
+- [ ] Replace fake waitlist toast on Download buttons with real email + consent modal
+- [ ] Consent language: CAN-SPAM/GDPR compliant standard opt-in checkbox language
+- [ ] Notify owner (ms.atwater@gmail.com) on each new waitlist signup

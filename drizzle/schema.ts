@@ -160,3 +160,18 @@ export const canvasTabs = mysqlTable("canvas_tabs", {
 
 export type CanvasTab = typeof canvasTabs.$inferSelect;
 export type InsertCanvasTab = typeof canvasTabs.$inferInsert;
+
+// ─── Waitlist ─────────────────────────────────────────────────────────────────
+
+export const waitlist = mysqlTable("waitlist", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  /** Platform they signed up for: 'macos' | 'ios' | 'both' */
+  platform: varchar("platform", { length: 32 }).default("both"),
+  /** Explicit marketing consent — required for legal compliance */
+  marketingConsent: int("marketingConsent").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WaitlistEntry = typeof waitlist.$inferSelect;
+export type InsertWaitlistEntry = typeof waitlist.$inferInsert;

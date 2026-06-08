@@ -49,7 +49,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="bg-white flex" style={{minHeight:'100dvh'}}>
       {/* Left — brand column */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 bg-black text-white p-12 relative overflow-hidden">
         {/* Grid lines */}
@@ -90,7 +90,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right — auth form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-16">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 py-10 lg:p-16 overflow-y-auto">
         {/* Mobile logo */}
         <div className="lg:hidden mb-10 text-center">
           <div className="font-display text-5xl tracking-tighter font-black text-black">

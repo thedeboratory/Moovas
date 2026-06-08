@@ -1,6 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, assets, collections, canvasTabs, type InsertAsset } from "../drizzle/schema";
+import {
+  InsertUser, users,
+  InsertAsset, assets,
+  collections,
+  canvasTabs,
+  waitlist, InsertWaitlistEntry,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -158,4 +164,23 @@ export async function createCanvasTab(userId: number, name: string) {
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(canvasTabs).values({ userId, name });
   return result;
+}
+
+// ─── Waitlist ─────────────────────────────────────────────────────────────────
+
+export async function addToWaitlist(entry: InsertWaitlistEntry) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Check for duplicate email — return existing entry rather than throwing
+  const existing = await db.select().from(waitlist).where(eq(waitlist.email, entry.email)).limit(1);
+  if (existing.length > 0) return { alreadyExists: true };
+  await db.insert(waitlist).values(entry);
+  return { alreadyExists: false };
+}
+
+export async function getWaitlistCount() {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select().from(waitlist);
+  return result.length;
 }
